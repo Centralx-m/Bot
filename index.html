@@ -1,29 +1,20 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bitget Grid Trading Bot</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <div class="container">
-        <h1>Bitget Grid Trading Bot</h1>
-        <div id="market-info">
-            <h2>Real-time Price:</h2>
-            <p id="price">Loading...</p>
-        </div>
-        <form id="grid-form">
-            <label for="pair">Currency Pair:</label>
-            <input type="text" id="pair" name="pair" value="BTCUSDT">
-            <label for="quantity">Quantity:</label>
-            <input type="number" id="quantity" name="quantity" value="0.1">
-            <label for="price">Price:</label>
-            <input type="number" id="price" name="price" value="50000">
-            <button type="submit">Place Order</button>
-        </form>
-    </div>
+<form id="grid-form">
+  <label for="base-select">Base Currency:</label>
+  <select id="base-select">
+    <option value="">Loading…</option>
+  </select>
 
-    <script src="script.js"></script>
-</body>
-</html>
+  <label for="pair-select">Pair Currency:</label>
+  <select id="pair-select" disabled>
+    <option value="">Select base first</option>
+  </select>
+
+  <label for="quantity">Quantity:</label>
+  <input type="number" id="quantity" value="0.1" step="any" />
+
+  <label for="price">Grid Price:</label>
+  <input type="number" id="price" step="any" />
+
+  <button type="submit">Place Grid Order</button>
+</form>
+<p id="price-display">Real-time Price: —</p>
