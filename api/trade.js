@@ -1,53 +1,30 @@
-const axios = require('axios');
+const axios  = require('axios');
 const crypto = require('crypto');
 
-// Bitget API credentials
-const API_KEY = 'your_bitget_api_key';
-const API_SECRET = 'your_bitget_api_secret';
-const API_PASSPHRASE = 'your_bitget_api_passphrase';
+const API_KEY       = process.env.BITGET_API_KEY;
+const API_SECRET    = process.env.BITGET_API_SECRET;
+const API_PASSPHRASE= process.env.BITGET_API_PASSPHRASE;
+const BASE_URL      = 'https://api.bitget.com/api/v1';
 
-// API base URL
-const BASE_URL = 'https://api.bitget.com/api/v1';
+// Sign parameters
+function sign(params) {
+  const qs = new URLSearchParams(params).toString();
+  return crypto.createHmac('sha256', API_SECRET).update(qs).digest('hex');
+}
 
-// Helper function to generate the signature for the API request
-const generateSignature = (params) => {
-    const queryString = new URLSearchParams(params).toString();
-    return crypto.createHmac('sha256', API_SECRET).update(queryString).digest('hex');
-};
-
-// Function to place a grid order on Bitget
-const placeGridOrder = async (symbol, quantity, price) => {
-    const params = {
-        symbol,
-        size: quantity,
-        price,
-        apiKey: API_KEY,
-        passphrase: API_PASSPHRASE,
-        timestamp: Date.now(),
-    };
-    
-    const signature = generateSignature(params);
-    params.sign = signature;
-
-    try {
-        const response = await axios.post(`${BASE_URL}/spot/v1/order`, params);
-        return response.data;
-    } catch (error) {
-        return { error: error.message };
-    }
-};
-
-// Serverless function endpoint
 module.exports = async (req, res) => {
-    if (req.method === 'POST') {
-        const { pair, quantity, price } = req.body;
-
-        // Call the Bitget API to place the order
-        const orderResponse = await placeGridOrder(pair, quantity, price);
-
-        // Return the order response to the client
-        res.status(200).json(orderResponse);
-    } else {
-        res.status(405).send('Method Not Allowed');
-    }
+  if (req.method !== 'POST') return res.status(405).end();
+  const { symbol, quantity, price } = req.body;
+  const params = {
+    symbol, size: quantity, price,
+    apiKey: API_KEY, passphrase: API_PASSPHRASE,
+    timestamp: Date.now()
+  };
+  params.sign = sign(params);
+  try {
+    const r = await axios.post(`${BASE_URL}/spot/v1/order`, params);
+    res.status(200).json(r.data);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 };
