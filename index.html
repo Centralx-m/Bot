@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XTAAGC Bot - Real Trading Platform</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <!-- Axios -->
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.2/dist/axios.min.js"></script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a0b0e;
+            color: #fff;
+            min-height: 100vh;
+        }
+        .glass {
+            background: rgba(26, 28, 32, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0,255,157,0.1);
+        }
+        .loader {
+            width: 48px;
+            height: 48px;
+            border: 3px solid rgba(0,255,157,0.3);
+            border-radius: 50%;
+            border-top-color: #00ff9d;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes slideIn {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .animate-slideIn { animation: slideIn 0.3s ease-out; }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #1a1c20; }
+        ::-webkit-scrollbar-thumb { background: #00ff9d; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="fixed inset-0 bg-[#0a0b0e] flex items-center justify-center z-50">
+        <div class="text-center">
+            <div class="loader mx-auto mb-4"></div>
+            <h2 class="text-2xl font-bold text-green-400 mb-2">XTAAGC Bot</h2>
+            <p class="text-gray-400">Connecting to servers...</p>
+        </div>
+    </div>
+
+    <!-- Login Screen -->
+    <div id="login-screen" class="min-h-screen flex items-center justify-center p-4">
+        <div class="glass rounded-2xl p-8 w-full max-w-md animate-slideIn">
+            <h1 class="text-3xl font-bold text-center mb-2 bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
+                XTAAGC Bot
+            </h1>
+            <p class="text-gray-400 text-center mb-8">Real-time Crypto Trading Platform</p>
+            
+            <!-- Login Form -->
+            <div id="login-form">
+                <div class="mb-4">
+                    <label class="block text-gray-400 mb-2">Email</label>
+                    <input type="email" id="login-email" class="w-full bg-gray-800 rounded-lg px-4 py-3 border border-gray-700 text-white focus:border-green-400 outline-none">
+                </div>
+                <div class="mb-6">
+                    <label class="block text-gray-400 mb-2">Password</label>
+                    <input type="password" id="login-password" class="w-full bg-gray-800 rounded-lg px-4 py-3 border border-gray-700 text-white focus:border-green-400 outline-none">
+                </div>
+                <button onclick="login()" class="w-full bg-gradient-to-r from-green-400 to-blue-500 py-3 rounded-lg font-semibold mb-4 hover:opacity-90 transition">
+                    Login
+                </button>
+                <p class="text-center text-gray-400">
+                    Don't have an account? 
+                    <button onclick="showRegister()" class="text-green-400 hover:underline">Register</button>
+                </p>
+            </div>
+            
+            <!-- Register Form -->
+            <div id="register-form" class="hidden">
+                <div class="mb-4">
+                    <label class="block text-gray-400 mb-2">Username</label>
+                    <input type="text" id="register-username" class="w-full bg-gray-800 rounded-lg px-4 py-3 border border-gray-700">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-400 mb-2">Email</label>
+                    <input type="email" id="register-email" class="w-full bg-gray-800 rounded-lg px-4 py-3 border border-gray-700">
+                </div>
+                <div class="mb-6">
+                    <label class="block text-gray-400 mb-2">Password</label>
+                    <input type="password" id="register-password" class="w-full bg-gray-800 rounded-lg px-4 py-3 border border-gray-700">
+                </div>
+                <button onclick="register()" class="w-full bg-gradient-to-r from-green-400 to-blue-500 py-3 rounded-lg font-semibold mb-4">
+                    Register
+                </button>
+                <p class="text-center text-gray-400">
+                    Already have an account? 
+                    <button onclick="showLogin()" class="text-green-400">Login</button>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboard" class="hidden">
+        <!-- Navigation -->
+        <nav class="glass fixed top-0 left-0 right-0 z-40 border-b border-gray-800">
+            <div class="container mx-auto px-4">
+                <div class="flex items-center justify-between h-16">
+                    <h1 class="text-2xl font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
+                        XTAAGC
+                    </h1>
+                    
+                    <div class="flex items-center space-x-4">
+                        <button onclick="navigate('dashboard')" class="nav-btn px-4 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-white/10 transition" data-page="dashboard">
+                            <i class="fas fa-chart-line mr-2"></i>Dashboard
+                        </button>
+                        <button onclick="navigate('trading')" class="nav-btn px-4 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-white/10 transition" data-page="trading">
+                            <i class="fas fa-chart-bar mr-2"></i>Trading
+                        </button>
+                        <button onclick="navigate('portfolio')" class="nav-btn px-4 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-white/10 transition" data-page="portfolio">
+                            <i class="fas fa-wallet mr-2"></i>Portfolio
+                        </button>
+                        
+                        <div class="relative">
+                            <button onclick="toggleUserMenu()" class="flex items-center space-x-2 p-2 rounded-lg hover:bg-white/10">
+                                <div class="w-8 h-8 rounded-full bg-gradient-to-r from-green-400 to-blue-500 flex items-center justify-center">
+                                    <span id="user-initial" class="text-sm font-bold">U</span>
+                                </div>
+                                <span id="username-display" class="text-sm">Loading...</span>
+                            </button>
+                            
+                            <div id="user-menu" class="hidden absolute right-0 mt-2 w-48 glass rounded-lg shadow-xl">
+                                <div class="p-3 border-b border-gray-700">
+                                    <p class="text-sm font-medium" id="user-email">user@example.com</p>
+                                </div>
+                                <button onclick="logout()" class="w-full text-left px-4 py-3 text-red-400 hover:bg-white/10 transition">
+                                    <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <main class="container mx-auto px-4 pt-20 pb-8">
+            <!-- Dashboard Page -->
+            <div id="page-dashboard" class="page active">
+                <!-- Stats -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                    <div class="glass rounded-xl p-6 card-hover">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-gray-400 text-sm">Total Value</p>
+                                <h3 class="text-2xl font-bold" id="total-value">$0.00</h3>
+                            </div>
+                            <div class="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                                <i class="fas fa-chart-line text-green-400"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="glass rounded-xl p-6 card-hover">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-gray-400 text-sm">Daily P&L</p>
+                                <h3 class="text-2xl font-bold" id="daily-pnl">$0.00</h3>
+                            </div>
+                            <div class="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
+                                <i class="fas fa-chart-bar text-red-400"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="glass rounded-xl p-6 card-hover">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-gray-400 text-sm">Active Trades</p>
+                                <h3 class="text-2xl font-bold" id="active-trades">0</h3>
+                            </div>
+                            <div class="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
+                                <i class="fas fa-clock text-blue-400"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="glass rounded-xl p-6 card-hover">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-gray-400 text-sm">Win Rate</p>
+                                <h3 class="text-2xl font-bold" id="win-rate">0%</h3>
+                            </div>
+                            <div class="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                                <i class="fas fa-trophy text-yellow-400"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Chart -->
+                <div class="glass rounded-xl p-6 mb-8">
+                    <h3 class="text-lg font-semibold mb-4">Portfolio Performance</h3>
+                    <div class="h-80">
+                        <canvas id="portfolio-chart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Opportunities & Trades -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="glass rounded-xl p-6">
+                        <h3 class="text-lg font-semibold mb-4">Live Opportunities</h3>
+                        <div id="opportunities-list" class="space-y-3">
+                            <div class="text-center text-gray-400 py-8">
+                                <i class="fas fa-search text-4xl mb-3 opacity-50"></i>
+                                <p>Scanning for opportunities...</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="glass rounded-xl p-6">
+                        <h3 class="text-lg font-semibold mb-4">Recent Trades</h3>
+                        <div id="trades-list" class="space-y-3">
+                            <div class="text-center text-gray-400 py-8">
+                                <i class="fas fa-exchange-alt text-4xl mb-3 opacity-50"></i>
+                                <p>No trades yet</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Trading Page -->
+            <div id="page-trading" class="page hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Trading Panel -->
+                    <div class="lg:col-span-2 glass rounded-xl p-6">
+                        <h3 class="text-lg font-semibold mb-4">Trading Panel</h3>
+                        
+                        <div class="mb-4">
+                            <select id="symbol-select" class="w-full bg-gray-800 rounded-lg px-4 py-3 border border-gray-700">
+                                <option value="BTC/USDT">BTC/USDT</option>
+                                <option value="ETH/USDT">ETH/USDT</option>
+                                <option value="SOL/USDT">SOL/USDT</option>
+                            </select>
+                        </div>
+                        
+                        <div class="bg-gray-800/50 rounded-lg p-4 mb-4">
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-400">Current Price</span>
+                                <span class="text-2xl font-bold" id="current-price">$0.00</span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex space-x-2 mb-4">
+                            <button onclick="setOrderSide('buy')" class="flex-1 py-3 rounded-lg font-medium transition" id="buy-btn">
+                                Buy
+                            </button>
+                            <button onclick="setOrderSide('sell')" class="flex-1 py-3 rounded-lg font-medium transition" id="sell-btn">
+                                Sell
+                            </button>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="block text-gray-400 mb-2">Amount (USDT)</label>
+                            <input type="number" id="trade-amount" class="w-full bg-gray-800 rounded-lg px-4 py-3 border border-gray-700" value="100">
+                        </div>
+                        
+                        <button onclick="executeTrade()" class="w-full py-4 rounded-lg font-semibold text-lg transition" id="execute-btn">
+                            Execute Trade
+                        </button>
+                    </div>
+                    
+                    <!-- Order Book -->
+                    <div class="glass rounded-xl p-6">
+                        <h3 class="text-lg font-semibold mb-4">Order Book</h3>
+                        <div class="space-y-2 mb-4" id="order-book-asks"></div>
+                        <div class="bg-gray-800 rounded-lg p-2 text-center text-sm mb-4" id="spread">Spread: $0.00</div>
+                        <div class="space-y-2" id="order-book-bids"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Portfolio Page -->
+            <div id="page-portfolio" class="page hidden">
+                <div class="glass rounded-xl p-6 mb-6">
+                    <h3 class="text-lg font-semibold mb-4">Portfolio Summary</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div>
+                            <p class="text-gray-400 text-sm">Total</p>
+                            <p class="text-2xl font-bold" id="portfolio-total">$0.00</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-400 text-sm">Available</p>
+                            <p class="text-2xl font-bold" id="portfolio-available">$0.00</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-400 text-sm">Daily P&L</p>
+                            <p class="text-2xl font-bold" id="portfolio-daily">$0.00</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-400 text-sm">Total P&L</p>
+                            <p class="text-2xl font-bold" id="portfolio-total-pnl">$0.00</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="glass rounded-xl p-6">
+                    <h3 class="text-lg font-semibold mb-4">Holdings</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="text-gray-400 text-sm">
+                                    <th class="text-left pb-3">Asset</th>
+                                    <th class="text-right pb-3">Amount</th>
+                                    <th class="text-right pb-3">Price</th>
+                                    <th class="text-right pb-3">Value</th>
+                                    <th class="text-right pb-3">P&L</th>
+                                </tr>
+                            </thead>
+                            <tbody id="holdings-table">
+                                <tr><td colspan="5" class="text-center text-gray-400 py-8">No holdings</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
+
+    <script>
+        // ==================== CONFIGURATION ====================
+        const API_URL = window.location.origin + '/api';
+        const WS_URL = 'ws://' + window.location.host + '/ws';
+        
+        // Firebase Config - YOUR REAL CREDENTIALS
+        const firebaseConfig = {
+            apiKey: "AIzaSyCOcCDPqRSlAMJJBEeNchTA1qO9tl9Nldw",
+            authDomain: "xtaagc.firebaseapp.com",
+            projectId: "xtaagc",
+            storageBucket: "xtaagc.firebasestorage.app",
+            messagingSenderId: "256073982437",
+            appId: "1:256073982437:android:0c54368d54e260cba98f0c"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // ==================== STATE ====================
+        let currentUser = null;
+        let currentPage = 'dashboard';
+        let orderSide = 'buy';
+        let portfolioChart = null;
+        let ws = null;
+
+        // ==================== INITIALIZATION ====================
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                document.getElementById('loading-screen').style.display = 'none';
+            }, 1500);
+            
+            checkAuthState();
+        });
+
+        // ==================== AUTH ====================
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('dashboard').classList.remove('hidden');
+                document.getElementById('user-initial').textContent = user.email[0].toUpperCase();
+                document.getElementById('username-display').textContent = user.email.split('@')[0];
+                document.getElementById('user-email').textContent = user.email;
+                
+                await loadDashboardData();
+                connectWebSocket();
+                startDataRefresh();
+            } else {
+                document.getElementById('login-screen').style.display = 'flex';
+                document.getElementById('dashboard').classList.add('hidden');
+            }
+        });
+
+        function checkAuthState() {
+            // Check if user is already logged in
+        }
+
+        async function login() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            
+            try {
+                await auth.signInWithEmailAndPassword(email, password);
+                showToast('Login successful!', 'success');
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        }
+
+        async function register() {
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            const username = document.getElementById('register-username').value;
+            
+            try {
+                await auth.createUserWithEmailAndPassword(email, password);
+                
+                // Save to backend
+                await axios.post(`${API_URL}/auth/register`, {
+                    email,
+                    password,
+                    username
+                });
+                
+                showToast('Registration successful!', 'success');
+                showLogin();
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        }
+
+        function logout() {
+            auth.signOut();
+            showToast('Logged out', 'info');
+        }
+
+        function showLogin() {
+            document.getElementById('login-form').classList.remove('hidden');
+            document.getElementById('register-form').classList.add('hidden');
+        }
+
+        function showRegister() {
+            document.getElementById('login-form').classList.add('hidden');
+            document.getElementById('register-form').classList.remove('hidden');
+        }
+
+        // ==================== NAVIGATION ====================
+        function navigate(page) {
+            document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+            document.getElementById(`page-${page}`).classList.remove('hidden');
+            
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-white/10', 'text-white');
+                if (btn.dataset.page === page) {
+                    btn.classList.add('bg-white/10', 'text-white');
+                }
+            });
+            
+            currentPage = page;
+            
+            if (page === 'dashboard') loadDashboardData();
+            if (page === 'trading') loadTradingData();
+            if (page === 'portfolio') loadPortfolioData();
+        }
+
+        function toggleUserMenu() {
+            document.getElementById('user-menu').classList.toggle('hidden');
+        }
+
+        // ==================== DASHBOARD ====================
+        async function loadDashboardData() {
+            try {
+                // Load portfolio
+                const portfolio = await axios.get(`${API_URL}/portfolio`, {
+                    headers: { Authorization: `Bearer ${await currentUser.getIdToken()}` }
+                });
+                
+                document.getElementById('total-value').textContent = `$${portfolio.data.total || 0}`;
+                document.getElementById('daily-pnl').textContent = `$${portfolio.data.daily_pnl || 0}`;
+                
+                // Load opportunities
+                const opps = await axios.get(`${API_URL}/opportunities`);
+                displayOpportunities(opps.data.opportunities);
+                
+                // Load trades
+                const trades = await axios.get(`${API_URL}/trades`, {
+                    headers: { Authorization: `Bearer ${await currentUser.getIdToken()}` }
+                });
+                displayTrades(trades.data.trades);
+                
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            }
+        }
+
+        function displayOpportunities(opportunities) {
+            const list = document.getElementById('opportunities-list');
+            if (!opportunities || opportunities.length === 0) {
+                list.innerHTML = '<div class="text-center text-gray-400 py-8">No opportunities found</div>';
+                return;
+            }
+            
+            list.innerHTML = opportunities.map(opp => `
+                <div class="flex justify-between items-center p-3 bg-gray-800/30 rounded-lg">
+                    <div>
+                        <div class="font-medium">${opp.strategy}</div>
+                        <div class="text-xs text-gray-400">${opp.cycle || opp.symbol}</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-green-400">+${opp.roi?.toFixed(2) || 0}%</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function displayTrades(trades) {
+            const list = document.getElementById('trades-list');
+            if (!trades || trades.length === 0) {
+                list.innerHTML = '<div class="text-center text-gray-400 py-8">No trades yet</div>';
+                return;
+            }
+            
+            list.innerHTML = trades.map(trade => `
+                <div class="flex justify-between items-center p-3 bg-gray-800/30 rounded-lg">
+                    <div>
+                        <div class="font-medium">${trade.symbol}</div>
+                        <div class="text-xs text-gray-400">${new Date(trade.created_at).toLocaleTimeString()}</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="${trade.profit > 0 ? 'text-green-400' : 'text-red-400'}">
+                            ${trade.profit > 0 ? '+' : ''}$${trade.profit?.toFixed(2) || 0}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ==================== TRADING ====================
+        function setOrderSide(side) {
+            orderSide = side;
+            document.getElementById('buy-btn').className = `flex-1 py-3 rounded-lg font-medium transition ${
+                side === 'buy' ? 'bg-gradient-to-r from-green-400 to-blue-500 text-white' : 'bg-gray-800 text-gray-400'
+            }`;
+            document.getElementById('sell-btn').className = `flex-1 py-3 rounded-lg font-medium transition ${
+                side === 'sell' ? 'bg-gradient-to-r from-red-400 to-pink-500 text-white' : 'bg-gray-800 text-gray-400'
+            }`;
+            document.getElementById('execute-btn').className = `w-full py-4 rounded-lg font-semibold text-lg transition ${
+                side === 'buy' ? 'bg-gradient-to-r from-green-400 to-blue-500' : 'bg-gradient-to-r from-red-400 to-pink-500'
+            }`;
+            document.getElementById('execute-btn').textContent = side === 'buy' ? 'Buy' : 'Sell';
+        }
+
+        async function executeTrade() {
+            const symbol = document.getElementById('symbol-select').value;
+            const amount = document.getElementById('trade-amount').value;
+            
+            try {
+                const response = await axios.post(`${API_URL}/trades`, {
+                    symbol,
+                    side: orderSide,
+                    amount: parseFloat(amount)
+                }, {
+                    headers: { Authorization: `Bearer ${await currentUser.getIdToken()}` }
+                });
+                
+                if (response.data.success) {
+                    showToast('Trade executed successfully!', 'success');
+                    loadDashboardData();
+                }
+            } catch (error) {
+                showToast(error.response?.data?.error || 'Trade failed', 'error');
+            }
+        }
+
+        async function loadTradingData() {
+            try {
+                const symbol = document.getElementById('symbol-select').value;
+                const ticker = await axios.get(`${API_URL}/price/${symbol}`);
+                document.getElementById('current-price').textContent = `$${ticker.data.last?.toFixed(2) || 0}`;
+                
+                const orderbook = await axios.get(`${API_URL}/orderbook/${symbol}`);
+                displayOrderBook(orderbook.data);
+            } catch (error) {
+                console.error('Error loading trading data:', error);
+            }
+        }
+
+        function displayOrderBook(orderbook) {
+            if (!orderbook) return;
+            
+            const asks = document.getElementById('order-book-asks');
+            const bids = document.getElementById('order-book-bids');
+            
+            asks.innerHTML = orderbook.asks?.slice(0,5).map(([price, amount]) => `
+                <div class="flex justify-between text-sm">
+                    <span class="text-red-400">$${price.toFixed(2)}</span>
+                    <span class="text-gray-300">${amount.toFixed(4)}</span>
+                </div>
+            `).join('') || '';
+            
+            bids.innerHTML = orderbook.bids?.slice(0,5).map(([price, amount]) => `
+                <div class="flex justify-between text-sm">
+                    <span class="text-green-400">$${price.toFixed(2)}</span>
+                    <span class="text-gray-300">${amount.toFixed(4)}</span>
+                </div>
+            `).join('') || '';
+            
+            const spread = (orderbook.asks?.[0]?.[0] || 0) - (orderbook.bids?.[0]?.[0] || 0);
+            document.getElementById('spread').textContent = `Spread: $${spread.toFixed(2)}`;
+        }
+
+        // ==================== PORTFOLIO ====================
+        async function loadPortfolioData() {
+            try {
+                const portfolio = await axios.get(`${API_URL}/portfolio`, {
+                    headers: { Authorization: `Bearer ${await currentUser.getIdToken()}` }
+                });
+                
+                document.getElementById('portfolio-total').textContent = `$${portfolio.data.total || 0}`;
+                document.getElementById('portfolio-available').textContent = `$${portfolio.data.available || 0}`;
+                document.getElementById('portfolio-daily').textContent = `$${portfolio.data.daily_pnl || 0}`;
+                document.getElementById('portfolio-total-pnl').textContent = `$${portfolio.data.total_pnl || 0}`;
+            } catch (error) {
+                console.error('Error loading portfolio:', error);
+            }
+        }
+
+        // ==================== WEBSOCKET ====================
+        function connectWebSocket() {
+            ws = new WebSocket(WS_URL);
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'price') {
+                    document.getElementById('current-price').textContent = `$${data.data.last?.toFixed(2) || 0}`;
+                }
+            };
+        }
+
+        // ==================== DATA REFRESH ====================
+        function startDataRefresh() {
+            setInterval(() => {
+                if (currentPage === 'dashboard') loadDashboardData();
+                if (currentPage === 'trading') loadTradingData();
+            }, 5000);
+        }
+
+        // ==================== CHARTS ====================
+        function initChart() {
+            const ctx = document.getElementById('portfolio-chart').getContext('2d');
+            portfolioChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array.from({length: 30}, (_, i) => `Day ${i+1}`),
+                    datasets: [{
+                        label: 'Portfolio Value',
+                        data: Array.from({length: 30}, () => Math.random() * 1000 + 9000),
+                        borderColor: '#00ff9d',
+                        backgroundColor: 'rgba(0,255,157,0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        // ==================== TOAST ====================
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `glass px-4 py-3 rounded-lg flex items-center space-x-3 animate-slideIn ${
+                type === 'success' ? 'border-green-500' :
+                type === 'error' ? 'border-red-500' : 'border-blue-500'
+            } border-l-4`;
+            
+            toast.innerHTML = `<i class="fas fa-${
+                type === 'success' ? 'check-circle' :
+                type === 'error' ? 'exclamation-circle' : 'info-circle'
+            }"></i><span>${message}</span>`;
+            
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // Initialize chart
+        setTimeout(initChart, 2000);
+
+        // Close user menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.relative')) {
+                document.getElementById('user-menu').classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
